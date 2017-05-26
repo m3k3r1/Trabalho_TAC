@@ -3,14 +3,14 @@
 .stack	2048
 
 dseg   	segment para public 'data'
-	POSy			db	5
-	POSx			db	10
-	ProxPOSy	db	5
-	ProxPOSx	db	10
-	Cor 			db  7
-	Car				db  32
-	POSya			db	5
-	POSxa			db	10
+	POSy			db	5	;posicao atual
+	POSx			db	10 ;posicao atual
+	ProxPOSy	db	5 ;proxima posicao
+	ProxPOSx	db	10 ; proxima posicao
+	Cor 			db  7 ; atributo cor do carater que estava na posicao anterior
+	Car				db  32	; carater que estava na posicao anterior
+	POSya			db	5 ; posicao anterior
+	POSxa			db	10 ; posicao anterior
 
 dseg    	ends
 
@@ -100,8 +100,6 @@ LER_SETA:
 		call 	LE_TECLA
 		cmp		ah, 1
 		je		ESTEND
-		CMP 	AL, 27	; ESCAPE
-		JE		FIM
 		jmp		LER_SETA
 
 ESTEND:
@@ -110,7 +108,7 @@ ESTEND:
 		dec 	ProxPOSy
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
-		jne 	CICLO
+		jne 	CICLO ; Se estiver ocupada volta ao inicio sem alteracao da posicao atual
 		dec 	POSy
 		jmp 	CICLO
 
@@ -120,8 +118,8 @@ BAIXO:
 		jne		ESQUERDA
 		inc 	ProxPOSy	;Baixo
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
-		cmp 	al, 20h ; ; Verificacao se esta esta ocupada
-		jne 	CICLO
+		cmp 	al, 20h ;  Verificacao se esta esta ocupada
+		jne 	CICLO; Se estiver ocupada volta ao inicio sem alteracao da posicao atual
 		inc 	POSy
 		jmp		CICLO
 
@@ -131,7 +129,7 @@ ESQUERDA:
 		dec 	ProxPOSx;
 		goto_Prox_xy ProxPOSx,ProxPOSy
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
-		jne 	CICLO
+		jne 	CICLO; Se estiver ocupada volta ao inicio sem alteracao da posicao atual
 		dec 	POSx
 		jmp		CICLO
 
@@ -141,7 +139,7 @@ DIREITA:
 		inc 	ProxPOSx;
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
-		jne 	CICLO
+		jne 	CICLO; Se estiver ocupada volta ao inicio sem alteracao da posicao atual
 		inc 	POSx
 		jmp		CICLO
 
