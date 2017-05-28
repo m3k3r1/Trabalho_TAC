@@ -109,8 +109,8 @@ IMPRIME:
 		call 		LE_TECLA
 		cmp		ah, 1
 		je		ESTEND
-		CMP 		AL, 27		; ESCAPE
-		JE		FIM
+		cmp 	AL, 27		; ESCAPE
+		je		ESCAPE
 
 
 UM:		CMP 		AL, 49		; Tecla 1
@@ -157,25 +157,26 @@ DIREITA:
 		inc		POSx		;Direita
 		jmp		CICLO
 
-
+ESCAPE:
 		mov ax,0b800h
 		mov es,ax
-		;mov cx,25*80
+		xor si,si
+		jmp fim
 
-ciclo2:
-		mov ah, es:[bx]
-		mov al, es:[bx+1]
+
+fim:
+		mov al, es:[si]
+		mov ah, es:[si+1]
 		mov var1,ax
 		mov ah,40h
 		mov cx,2
-		mov dx,var1
+		lea dx,var1
 		mov	bx,handle
 		int 21h
-		inc bx
-		inc bx
-		cmp bx, 4000
-		jne ciclo2
-fim:
+		add si , 2
+		cmp si, 4000
+		jne fim
+
 		mov		ah,3Eh ; Fecho do ficheiro
 		mov		bx,handle
 		int		21h
