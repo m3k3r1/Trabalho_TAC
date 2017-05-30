@@ -94,7 +94,7 @@ Main  proc
 
 		mov 	ah,3CH ; Criacao do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		mov 	dx, OFFSET filename
+		lea 	dx, filename
 		int		21h
 		mov		handle, ax
 
@@ -115,7 +115,7 @@ IMPRIME:
 
 UM:		CMP 		AL, 49		; Tecla 1
 		JNE		DOIS
-		mov		Car, 35	;Caracter CHEIO
+		mov		Car, 219	;Caracter CHEIO
 		jmp		CICLO
 
 DOIS:		CMP 		AL, 50		; Tecla 2
