@@ -7,18 +7,30 @@ dseg   	segment para public 'data'
 	Total_Sec db  ?
 	Total_Min db  ?
 	Mensagem_Final db 'Parabens conseguiu chegar ao fim.$'
+	buffer	db	'Labirinto:',13,10
+		db 	'+----------------------------------+',13,10
+		db 	' 1: Jogar                					',13,10
+		db	' 2: Carregar Labirinto							',13,10
+		db 	' 3: Top 10           							',13,10
+		db	' 4: Configuracao do Labirinto      ',13,10
+		db	' 5: Sair     ',13,10
+		db	'+----------------------------------+$',13,10
+	Escolha   db  ?
 	Inic_Sec	db  ?
 	Inic_Min	db  ?
 	total_Inic dw ?
 	Fim_Sec		db  ?
 	Fim_Min		db  ?
 	total_fim dw  ?
+	Car_Cria  db  ?
 	carFich 	db 	?
 	var1			dw 	?
 	handletop dw  ?
 	handle  	dw  ?
 	filetop10 db  "top10.txt", 0
 	filename 	db  "Lab1.txt", 0
+	filename_Cria db "f1.txt", 0
+	handle_Cria dw ?
 	POSy			db	5
 	POSx			db	10
 	ProxPOSy	db	5
@@ -98,14 +110,43 @@ main		proc
 		mov 	es,ax
 		xor 	si,si
 
-		call apaga_ecran
-
 		goto_xy	POSx,POSy	; Vai para nova possi��o
 		mov 	ah, 08h	; Guarda o Caracter que est� na posi��o do Cursor
 		mov		bh,0		; numero da p�gina
 		int		10h
 		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
 		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+
+INICIO:
+		call apaga_ecran
+
+		mov	ah, 09h
+		lea	dx, buffer
+		int	21h
+		mov ah, 00h
+		int 16h
+		goto_xy POSx, POSy
+		mov Escolha, al
+		cmp escolha, 49
+		je Abre_Default
+		cmp escolha, 50
+		je Abre_User
+		cmp escolha, 51
+		je final
+		cmp escolha, 52
+		je INICIO_Cria
+		cmp escolha, 53
+		je final
+		cmp al, 48
+		jbe INICIO ; caso nao escolha uma das opcoes volta ao inicio
+		cmp al, 54
+		jae INICIO
+;###########################################
+;Abertura do labirinto default
+Abre_Default:
+		mov 	ax,0b800h
+		mov 	es,ax
+		xor 	si,si
 
 		mov 	ah,3Dh ; Abertura do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
@@ -130,8 +171,38 @@ fecha_ficheiro:
 		mov     bx,handle
 		int     21h
 		jmp			CICLO
+;#######################################
+;Abertura do labirinto do user
+Abre_User:
+		mov 	ax,0b800h
+		mov 	es,ax
+		xor 	si,si
 
+		mov 	ah,3Dh ; Abertura do ficheiro
+		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		lea 	dx, filename_Cria
+		int		21h
+		mov		handle_Cria, ax
 
+ler_ciclo_user:
+		mov     ah,3fh			; indica que vai ser lido um ficheiro
+		mov     bx,handle_Cria		; bx deve conter o Handle do ficheiro previamente aberto
+		mov     cx,1			; numero de bytes a ler
+		lea     dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
+		int     21h				; faz efectivamente a leitura
+		cmp	    ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
+		je	    fecha_ficheiro_user	; se EOF fecha o ficheiro
+		mov     ah,02h			; coloca o caracter no ecran
+		mov	    dl,carFich		; este é o caracter a enviar para o ecran
+		int	    21h				; imprime no ecran
+		jmp	    ler_ciclo_user		; continua a ler o ficheiro
+fecha_ficheiro_user:
+		mov     ah,3eh
+		mov     bx,handle_Cria
+		int     21h
+		jmp			CICLO
+;########################################
+;Jogo em si
 CICLO:
 		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
 		mov		ah, 02h
@@ -333,30 +404,109 @@ Fim_D:
 		mov   total_fim, ax
 		jmp   FIM
 
-;TOP10:
-	;	mov 	ah,3Dh ; Abertura do ficheiro
-		;mov 	cx,0
-		;lea 	dx, filetop10
-		;int		21h
-		;mov		handletop, ax
-		;xor   si, si
-;ler_ciclo_TEMPO:
-	;	mov   ah,3fh			; indica que vai ser lido um ficheiro
-		;mov   bx,handletop	; bx deve conter o Handle do ficheiro previamente aberto
-		;mov   cx,1			; numero de bytes a ler
-		;lea   dx,carFich		; vai ler para o local de memoria apontado por dx (carFich)
-		;int   21h				; faz efectivamente a leitura
-		;cmp	  ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
-		;je	  fecha_ficheiro	; se EOF fecha o ficheiro
-		;mov   al, carFich
-		;mov   vec_top10[si], al
-		;mov 	ah,09h ;display da mensagem de quanto tempo demorou
-		;lea   dx, vec_top10[si]
-		;int   21h
-		;inc   si
-		;cmp   si, 10
-		;jne 	ler_ciclo_TEMPO
-		;je  	FINAL	; continua a ler o ficheiro
+		call		apaga_ecran
+
+		;Obter a posi��o
+		dec		POSy		; linha = linha -1
+		dec		POSx		; POSx = POSx -1
+
+		mov 	ah,3CH ; Criacao do ficheiro
+		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		lea 	dx, filename
+		int		21h
+		mov		handle, ax
+
+;###########################################################
+; PARTE RELACIONADA COM A CRIACAO DO LABIRINTO
+INICIO_Cria:
+		call		apaga_ecran
+
+		;Obter a posi��o
+		dec		POSy		; linha = linha -1
+		dec		POSx		; POSx = POSx -1
+
+		mov 	ah,3CH ; Criacao do ficheiro
+		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		lea 	dx, filename_Cria
+		int		21h
+		mov		handle_Cria, ax
+CICLO_Cria:	goto_xy	POSx,POSy
+IMPRIME_Cria:
+		mov		ah, 02h
+		mov		dl, Car_Cria
+		int		21H
+		goto_xy	POSx,POSy
+
+		call 	LE_TECLA
+		cmp		ah, 1
+		je		ESTEND_Cria
+		cmp 	AL, 27		; ESCAPE
+		je		ESCAPE_Cria
+
+UM_Cria:		CMP 		AL, 49		; Tecla 1
+		JNE		DOIS_Cria
+		mov		Car_Cria, 219	;Caracter CHEIO
+		jmp		CICLO_Cria
+
+DOIS_Cria:		CMP 		AL, 50		; Tecla 2
+		JNE		TRES_Cria
+		mov		Car_Cria, 32		;Espaco
+		jmp		CICLO_Cria
+
+TRES_Cria:		CMP 		AL, 51		; Tecla 3
+		JNE		QUATRO_Cria
+		mov		Car_Cria, 73	;Carater Inicial
+		jmp		CICLO_Cria
+
+QUATRO_Cria:	CMP 		AL, 52; Tecla 4
+		JNE		NOVE_Cria
+		mov		Car_Cria, 70		;Carater final
+		jmp		CICLO_Cria
+
+NOVE_Cria:		jmp		CICLO_Cria
+
+ESTEND_Cria:	cmp 		al,48h
+		jne		BAIXO_Cria
+		dec		POSy		;cima
+		jmp		CICLO_Cria
+
+BAIXO_Cria:	cmp		al,50h
+		jne		ESQUERDA_Cria
+		inc 	POSy		;Baixo
+		jmp		CICLO_Cria
+
+ESQUERDA_Cria:
+		cmp		al,4Bh
+		jne		DIREITA_Cria
+		dec		POSx		;Esquerda
+		jmp		CICLO_Cria
+
+DIREITA_Cria:
+		cmp		al,4Dh
+		jne		CICLO_Cria
+		inc		POSx		;Direita
+		jmp		CICLO_Cria
+
+ESCAPE_Cria:
+		mov ax,0b800h
+		mov es,ax
+		xor si,si
+GUARDA_Cria:
+		mov al, es:[si]
+		mov ah, es:[si+1]
+		mov var1,ax
+		mov ah,40h
+		mov cx,2
+		lea dx,var1
+		mov	bx,handle_Cria
+		int 21h
+		add si , 2
+		cmp si, 4000
+		jne GUARDA_Cria
+		mov		ah,3Eh ; Fecho do ficheiro
+		mov		bx,handle_Cria
+		int		21h
+		jmp INICIO
 
 FIM:
 		goto_xy_tempo
@@ -371,6 +521,7 @@ FIM:
 		lea   dx, Mensagem_Final
 		int   21h
 FINAL:
+		call 	apaga_ecran
 		mov		ah,4CH
 		INT		21H
 main		endp
