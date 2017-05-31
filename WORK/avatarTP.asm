@@ -205,7 +205,6 @@ Abre_User:
 		mov   POSx, 5
 		mov   POSy, 10
 		goto_xy POSx, POSy
-
 ler_ciclo_user:
 		mov   ah,3fh			; indica que vai ser lido um ficheiro
 		mov   bx,handle_Cria		; bx deve conter o Handle do ficheiro previamente aberto
@@ -567,9 +566,11 @@ Editar:
 
 		mov 	ah,3Dh ; Abertura do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx,filename_Cria
+		lea 	dx, filename_Cria
 		int		21h
-		mov		handle_Cria,ax
+		mov		handle_Cria, ax
+		mov   POSx, 5
+		mov   POSy, 10
 		goto_xy POSx, POSy
 ler_ciclo_edit:
 		mov   ah,3fh			; indica que vai ser lido um ficheiro
@@ -588,13 +589,10 @@ fecha_ficheiro_edit:
 		mov 	POSx, 1
 		goto_xy POSx,POSy
 		mov		ah, 09h
-		lea		dx, buffer_Joga
+		lea		dx, buffer_Legenda
 		int		21h
 		mov 	POSx, 5
 		mov 	POSy, 10
-		mov   ah,3eh
-		mov   bx,handle_Cria
-		int   21h
 		jmp		CICLO_Cria
 
 FIM:
