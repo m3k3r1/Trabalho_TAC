@@ -7,14 +7,17 @@ dseg   	segment para public 'data'
 	Total_Sec db  ?
 	Total_Min db  ?
 	Mensagem_Final db 'Parabens conseguiu chegar ao fim.$'
-	buffer	db	'Labirinto:',13,10
-		db 	'+----------------------------------+',13,10
+	buffer db 'Labirinto',13,10
+		db	'+----------------------------------+',13,10
 		db 	' 1: Jogar                					',13,10
-		db	' 2: Carregar Labirinto							',13,10
-		db 	' 3: Top 10           							',13,10
-		db	' 4: Configuracao do Labirinto      ',13,10
-		db	' 5: Sair     ',13,10
+		db	' 2: Carregar Labirinto						',13,10
+		db  ' 3: Editar Labirinto              ',13,10
+		db 	' 4: Top 10           							',13,10
+		db	' 5: Configuracao do Labirinto     ',13,10
+		db	' 6: Sair                          ',13,10
 		db	'+----------------------------------+$',13,10
+	buffer_Legenda db "Legenda: 1-Carater cheio // 2-Espaco // 3-Carater Inicial // 4- Carater Final$"
+	buffer_Joga db "Esc-Voltar ao menu$"
 	Escolha   db  ?
 	Inic_Sec	db  ?
 	Inic_Min	db  ?
@@ -39,6 +42,8 @@ dseg   	segment para public 'data'
 	Car				db  32
 	POSya			db	5
 	POSxa			db	10
+	Cria_POSx db  21
+	Cria_POSy db  3
 
 dseg    	ends
 
@@ -61,11 +66,11 @@ endm
 ;########################################################################
 ;Macro para imprimir no final do ecra.
 goto_xy_tempo macro
-			MOV	AH,02H
-			MOV	BH,0
-			MOV	DL,1
-			MOV	DH,24
-			INT	10H
+		MOV	AH,02H
+		MOV	BH,0
+		MOV	DL,1
+		MOV	DH,24
+		INT	10H
 ENDM
 ;Macro para mudar a posicao do cursor
 goto_xy	macro		POSx,POSy
@@ -95,11 +100,11 @@ apaga_ecran	proc
 		mov		cx,25*80
 
 apaga:
-		mov	byte ptr es:[bx],' '
+		mov		byte ptr es:[bx],' '
 		mov		byte ptr es:[bx+1],7
 		inc		bx
-		inc 		bx
-		loop		apaga
+		inc 	bx
+		loop	apaga
 		ret
 apaga_ecran	endp
 
@@ -118,32 +123,36 @@ main		proc
 		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
 
 INICIO:
-		call apaga_ecran
-
-		mov	ah, 09h
-		lea	dx, buffer
-		int	21h
-		mov ah, 00h
-		int 16h
+		call 	apaga_ecran
+		mov 	POSx, 1
+		mov 	POSy, 1
 		goto_xy POSx, POSy
-		mov Escolha, al
-		cmp escolha, 49
-		je Abre_Default
-		cmp escolha, 50
-		je Abre_User
-		cmp escolha, 51
-		je final
-		cmp escolha, 52
-		je INICIO_Cria
-		cmp escolha, 53
-		je final
-		cmp al, 48
-		jbe INICIO ; caso nao escolha uma das opcoes volta ao inicio
-		cmp al, 54
-		jae INICIO
+		mov		ah, 09h
+		lea		dx, buffer
+		int		21h
+		mov 	ah, 00h
+		int 	16h
+		mov 	Escolha, al
+		cmp 	escolha, 49
+		je 		Abre_Default
+		cmp 	escolha, 50
+		je 		Abre_User
+		cmp   escolha, 51
+		je    Editar
+		cmp 	escolha, 52
+		je 		final
+		cmp 	escolha, 53
+		je 		INICIO_Cria
+		cmp 	escolha, 54
+		je 		final
+		cmp 	al, 48
+		jbe 	INICIO ; caso nao escolha uma das opcoes volta ao inicio
+		cmp 	al, 54
+		jae 	INICIO
 ;###########################################
 ;Abertura do labirinto default
 Abre_Default:
+		call  apaga_ecran
 		mov 	ax,0b800h
 		mov 	es,ax
 		xor 	si,si
@@ -153,27 +162,37 @@ Abre_Default:
 		lea 	dx, filename
 		int		21h
 		mov		handle, ax
+		goto_xy POSx, POSy
 
 ler_ciclo:
-		mov     ah,3fh			; indica que vai ser lido um ficheiro
-		mov     bx,handle		; bx deve conter o Handle do ficheiro previamente aberto
-		mov     cx,1			; numero de bytes a ler
-		lea     dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
-		int     21h				; faz efectivamente a leitura
-		cmp	    ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
-		je	    fecha_ficheiro	; se EOF fecha o ficheiro
-		mov     ah,02h			; coloca o caracter no ecran
-		mov	    dl,carFich		; este é o caracter a enviar para o ecran
-		int	    21h				; imprime no ecran
-		jmp	    ler_ciclo		; continua a ler o ficheiro
+		mov   ah,3fh			; indica que vai ser lido um ficheiro
+		mov   bx,handle		; bx deve conter o Handle do ficheiro previamente aberto
+		mov   cx,1			; numero de bytes a ler
+		lea   dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
+		int   21h				; faz efectivamente a leitura
+		cmp   ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
+		je   fecha_ficheiro	; se EOF fecha o ficheiro
+		mov   ah,02h			; coloca o caracter no ecran
+		mov   dl,carFich		; este é o caracter a enviar para o ecran
+		int 	21h				; imprime no ecran
+		jmp	 	ler_ciclo		; continua a ler o ficheiro
 fecha_ficheiro:
-		mov     ah,3eh
-		mov     bx,handle
-		int     21h
-		jmp			CICLO
+		mov 	POSy, 23
+		mov 	POSx, 1
+		goto_xy POSx,POSy
+		mov		ah, 09h
+		lea		dx, buffer_Joga
+		int		21h
+		mov 	POSx, 5
+		mov 	POSy, 10
+		mov   ah,3eh
+		mov   bx,handle
+		int   21h
+		jmp		CICLO
 ;#######################################
 ;Abertura do labirinto do user
 Abre_User:
+		call  apaga_ecran
 		mov 	ax,0b800h
 		mov 	es,ax
 		xor 	si,si
@@ -183,24 +202,35 @@ Abre_User:
 		lea 	dx, filename_Cria
 		int		21h
 		mov		handle_Cria, ax
+		mov   POSx, 5
+		mov   POSy, 10
+		goto_xy POSx, POSy
 
 ler_ciclo_user:
-		mov     ah,3fh			; indica que vai ser lido um ficheiro
-		mov     bx,handle_Cria		; bx deve conter o Handle do ficheiro previamente aberto
-		mov     cx,1			; numero de bytes a ler
-		lea     dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
-		int     21h				; faz efectivamente a leitura
-		cmp	    ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
-		je	    fecha_ficheiro_user	; se EOF fecha o ficheiro
-		mov     ah,02h			; coloca o caracter no ecran
-		mov	    dl,carFich		; este é o caracter a enviar para o ecran
-		int	    21h				; imprime no ecran
-		jmp	    ler_ciclo_user		; continua a ler o ficheiro
+		mov   ah,3fh			; indica que vai ser lido um ficheiro
+		mov   bx,handle_Cria		; bx deve conter o Handle do ficheiro previamente aberto
+		mov   cx,1			; numero de bytes a ler
+		lea   dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
+		int   21h				; faz efectivamente a leitura
+		cmp	  ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
+		je	  fecha_ficheiro_user	; se EOF fecha o ficheiro
+		mov   ah,02h			; coloca o caracter no ecran
+		mov	  dl,carFich		; este é o caracter a enviar para o ecran
+		int	  21h				; imprime no ecran
+		jmp	  ler_ciclo_user		; continua a ler o ficheiro
 fecha_ficheiro_user:
-		mov     ah,3eh
-		mov     bx,handle_Cria
-		int     21h
-		jmp			CICLO
+		mov 	POSy, 23
+		mov 	POSx, 1
+		goto_xy POSx,POSy
+		mov		ah, 09h
+		lea		dx, buffer_Joga
+		int		21h
+		mov 	POSx, 5
+		mov 	POSy, 10
+		mov   ah,3eh
+		mov   bx,handle_Cria
+		int   21h
+		jmp		CICLO
 ;########################################
 ;Jogo em si
 CICLO:
@@ -217,7 +247,8 @@ CICLO:
 		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
 
 		goto_xy	POSx,POSy	; Vai para posi��o do cursor
-IMPRIME:	mov		ah, 02h
+IMPRIME:
+		mov		ah, 02h
 		mov		dl, 190	; Coloca AVATAR
 		int		21H
 		goto_xy	POSx,POSy	; Vai para posi��o do cursor
@@ -237,7 +268,7 @@ LER_SETA:
 		cmp		ah, 1
 		je		ESTEND
 		CMP 	AL, 27	; ESCAPE
-		JE		FIM
+		JE		INICIO
 		jmp		LER_SETA
 
 ESTEND:
@@ -278,6 +309,7 @@ Fim_C:
 		xor   bx,bx ; mete o bx a 0
 		mov   bl,Inic_Sec ; passa o valor dos segundos para bh
 		add   ax, bx ; resultado da multiplicacao + segundos iniciais
+		sub   ax, total_Inic
 		mov   total_fim, ax
 		jmp   FIM
 
@@ -319,6 +351,7 @@ Fim_B:
 		xor   bx,bx ; mete o bx a 0
 		mov   bl,Inic_Sec ; passa o valor dos segundos para bh
 		add   ax, bx ; resultado da multiplicacao + segundos iniciais
+		sub   ax, total_Inic
 		mov   total_fim, ax
 		jmp   FIM
 
@@ -360,6 +393,7 @@ Fim_E:
 		xor   bx,bx ; mete o bx a 0
 		mov   bl,Inic_Sec ; passa o valor dos segundos para bh
 		add   ax, bx ; resultado da multiplicacao + segundos iniciais
+		sub   ax, total_Inic
 		mov   total_fim, ax
 		jmp   FIM
 
@@ -401,20 +435,21 @@ Fim_D:
 		xor   bx,bx ; mete o bx a 0
 		mov   bl,Inic_Sec ; passa o valor dos segundos para bl
 		add   ax, bx ; resultado da multiplicacao + segundos iniciais
+		sub   ax, total_Inic
 		mov   total_fim, ax
 		jmp   FIM
 
-		call		apaga_ecran
+		;call		apaga_ecran
 
 		;Obter a posi��o
-		dec		POSy		; linha = linha -1
-		dec		POSx		; POSx = POSx -1
+		;dec		POSy		; linha = linha -1
+		;dec		POSx		; POSx = POSx -1
 
-		mov 	ah,3CH ; Criacao do ficheiro
-		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx, filename
-		int		21h
-		mov		handle, ax
+		;mov 	ah,3CH ; Criacao do ficheiro
+		;mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		;lea 	dx, filename
+		;int		21h
+		;mov		handle, ax
 
 ;###########################################################
 ; PARTE RELACIONADA COM A CRIACAO DO LABIRINTO
@@ -430,12 +465,18 @@ INICIO_Cria:
 		lea 	dx, filename_Cria
 		int		21h
 		mov		handle_Cria, ax
-CICLO_Cria:	goto_xy	POSx,POSy
+		mov 	POSy, 23
+		mov 	POSx, 1
+		goto_xy POSx,POSy
+		mov		ah, 09h
+		lea		dx, buffer_Legenda
+		int		21h
+CICLO_Cria:	goto_xy	Cria_POSx,Cria_POSy
 IMPRIME_Cria:
 		mov		ah, 02h
 		mov		dl, Car_Cria
 		int		21H
-		goto_xy	POSx,POSy
+		goto_xy	Cria_POSx,Cria_POSy
 
 		call 	LE_TECLA
 		cmp		ah, 1
@@ -467,61 +508,111 @@ NOVE_Cria:		jmp		CICLO_Cria
 
 ESTEND_Cria:	cmp 		al,48h
 		jne		BAIXO_Cria
-		dec		POSy		;cima
+		cmp  	Cria_POSy, 2
+		jbe   CICLO_Cria
+		dec		Cria_POSy		;cima
 		jmp		CICLO_Cria
 
 BAIXO_Cria:	cmp		al,50h
 		jne		ESQUERDA_Cria
-		inc 	POSy		;Baixo
+		cmp   Cria_POSy, 22
+		jae   CICLO_Cria
+		inc 	Cria_POSy		;Baixo
 		jmp		CICLO_Cria
 
 ESQUERDA_Cria:
 		cmp		al,4Bh
 		jne		DIREITA_Cria
-		dec		POSx		;Esquerda
+		cmp   Cria_POSx, 20
+		jbe   CICLO_Cria
+		dec		Cria_POSx		;Esquerda
 		jmp		CICLO_Cria
 
 DIREITA_Cria:
 		cmp		al,4Dh
 		jne		CICLO_Cria
-		inc		POSx		;Direita
+		cmp   Cria_POSx,60
+		jae   CICLO_Cria
+		inc		Cria_POSx		;Direita
 		jmp		CICLO_Cria
 
 ESCAPE_Cria:
-		mov ax,0b800h
-		mov es,ax
-		xor si,si
+		mov 	ax,0b800h
+		mov 	es,ax
+		xor 	si,si
 GUARDA_Cria:
-		mov al, es:[si]
-		mov ah, es:[si+1]
-		mov var1,ax
-		mov ah,40h
-		mov cx,2
-		lea dx,var1
-		mov	bx,handle_Cria
-		int 21h
-		add si , 2
-		cmp si, 4000
-		jne GUARDA_Cria
+		mov 	al, es:[si]
+		mov 	ah, es:[si+1]
+		mov 	var1,ax
+		mov 	ah,40h
+		mov 	cx,2
+		lea 	dx,var1
+		mov		bx,handle_Cria
+		int 	21h
+		add 	si , 2
+		cmp 	si, 3520
+		jne 	GUARDA_Cria
 		mov		ah,3Eh ; Fecho do ficheiro
 		mov		bx,handle_Cria
 		int		21h
-		jmp INICIO
+		jmp 	INICIO
+
+;Editar
+;################################
+Editar:
+		call  apaga_ecran
+		mov 	ax,0b800h
+		mov 	es,ax
+		xor 	si,si
+
+		mov 	ah,3Dh ; Abertura do ficheiro
+		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		lea 	dx,filename_Cria
+		int		21h
+		mov		handle_Cria,ax
+		goto_xy POSx, POSy
+ler_ciclo_edit:
+		mov   ah,3fh			; indica que vai ser lido um ficheiro
+		mov   bx,handle_Cria		; bx deve conter o Handle do ficheiro previamente aberto
+		mov   cx,1			; numero de bytes a ler
+		lea   dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
+		int   21h				; faz efectivamente a leitura
+		cmp	  ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
+		je	  fecha_ficheiro_edit	; se EOF fecha o ficheiro
+		mov   ah,02h			; coloca o caracter no ecran
+		mov	  dl,carFich		; este é o caracter a enviar para o ecran
+		int	  21h				; imprime no ecran
+		jmp	  ler_ciclo_edit		; continua a ler o ficheiro
+fecha_ficheiro_edit:
+		mov 	POSy, 23
+		mov 	POSx, 1
+		goto_xy POSx,POSy
+		mov		ah, 09h
+		lea		dx, buffer_Joga
+		int		21h
+		mov 	POSx, 5
+		mov 	POSy, 10
+		mov   ah,3eh
+		mov   bx,handle_Cria
+		int   21h
+		jmp		CICLO_Cria
 
 FIM:
-		goto_xy_tempo
-		;jmp   TOP10
 		mov   ah,09h
 		mov   ax, total_fim
 		mov   bh, 0
 		mov   bl, 0
 		mov   cx, 5
 		int   10h
+		mov   ah,09h
+		lea 	dx, total_fim
+		int   21h
 		mov 	ah,09h ;display da mensagem de quanto tempo demorou
 		lea   dx, Mensagem_Final
 		int   21h
+
 FINAL:
-		call 	apaga_ecran
+
 		mov		ah,4CH
 		INT		21H
 main		endp
