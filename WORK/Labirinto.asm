@@ -23,7 +23,6 @@ dseg   	segment para public 'data'
 		db	'+----------------------------------+$',13,10
 	buffer_Legenda db "Legenda: 1-Carater cheio//2-Cardinal//3-Espaco//4-Carater Inicial//5- Carater Final$"
 	buffer_Joga db "Esc-Voltar ao menu$"
-	buffer_lab db "Introduza o labirinto que quer carregar: $"
 	Escolha   db  ?
 	Car_Cria  db  ?
 	carFich 	db 	?
@@ -31,6 +30,8 @@ dseg   	segment para public 'data'
 	handle  	dw  ?
 	filename 	db  "Lab1.txt", 0
 	filename_Cria db "f1.txt", 0
+	filename_TOP10 db "top10.txt", 0
+	handle_TOP10 dw ?
 	handle_Cria dw ?
 	POSy			db	5
 	POSx			db	10
@@ -50,7 +51,7 @@ dseg   	segment para public 'data'
 	inic_min dw ?
 	inic_sec dw ?
 	total_inic dw ?
-	array dw 22 dup(?)
+	array dw 5 dup(?)
 
 
 dseg    	ends
@@ -103,7 +104,7 @@ number2string endp
 ;############################################################
 ;encher o array com $ para o poder ler
 dollars proc
-  	mov  cx, 22
+  	mov  cx, 5
 dollars1:
   	mov  bl, '$'
   	mov  [ si ], bl
@@ -128,7 +129,6 @@ LE_TECLA	endp
 apaga_ecran	proc
 		xor		bx,bx
 		mov		cx,25*80
-
 apaga:
 		mov		byte ptr es:[bx],' '
 		mov		byte ptr es:[bx+1],7
@@ -137,6 +137,39 @@ apaga:
 		loop	apaga
 		ret
 apaga_ecran	endp
+;######################################################################
+;Guardar o tempo inicial
+tempo_inicial proc
+		mov   ah, 2Ch
+		int   21h    ; tempo do sistema no final do labirinto
+		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
+		xor   dh,dh
+		mov   inic_min, cx ; minutos para a variavel
+		mov   inic_sec, dx ; segundos para a variavel
+		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
+		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
+		mul   bx ; multiplicacao
+		add 	ax,inic_sec ; soma para obter tempo final
+		mov 	total_inic,ax ; tempo final para a variavel
+		ret
+tempo_inicial endp
+;######################################################################
+;Calculo do tempo demorado
+tempo_final proc
+		mov   ah, 2Ch
+		int   21h    ; tempo do sistema no final do labirinto
+		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
+		xor   dh,dh
+		mov   final_min, cx ; minutos para a variavel
+		mov   final_sec, dx ; segundos para a variavel
+		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
+		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
+		mul   bx ; multiplicacao
+		add 	ax,final_sec ; soma para obter tempo final
+		sub   ax, total_inic ; subtracao do tempo inicial ao final para obter o total
+		mov   total_time, ax
+		ret
+tempo_final endp
 
 main		proc
 		mov   ax, dseg
@@ -358,33 +391,11 @@ ESTEND:
 		dec 	POSy
 		jmp 	CICLO
 Inicio_C:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   inic_min, cx ; minutos para a variavel
-		mov   inic_sec, dx ; segundos para a variavel
-		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,inic_sec ; soma para obter tempo final
-		mov 	total_inic,ax ; tempo final para a variavel
+		call  tempo_inicial
 		dec 	POSy
 		jmp 	CICLO
 Fim_C:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   final_min, cx ; minutos para a variavel
-		mov   final_sec, dx ; segundos para a variavel
-		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,final_sec ; soma para obter tempo final
-		sub   ax, total_inic
-		mov   total_time, ax
-		mov   si, offset array
+		call  tempo_final
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -412,33 +423,11 @@ BAIXO:
 		inc 	POSy
 		jmp		CICLO
 Inicio_B:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   inic_min, cx ; minutos para a variavel
-		mov   inic_sec, dx ; segundos para a variavel
-		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,inic_sec ; soma para obter tempo final
-		mov 	total_inic,ax ; tempo final para a variavel
-		inc 	POSy
+		call  tempo_inicial
+		dec 	POSy
 		jmp 	CICLO
 Fim_B:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   final_min, cx ; minutos para a variavel
-		mov   final_sec, dx ; segundos para a variavel
-		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,final_sec ; soma para obter tempo final
-		sub   ax, total_inic
-		mov   total_time, ax
-		mov   si, offset array
+		call  tempo_final
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -466,33 +455,11 @@ ESQUERDA:
 		dec		POSx
 		jmp		CICLO
 Inicio_E:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   inic_min, cx ; minutos para a variavel
-		mov   inic_sec, dx ; segundos para a variavel
-		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,inic_sec ; soma para obter tempo final
-		mov 	total_inic,ax ; tempo final para a variavel
-		dec 	POSx
+		call  tempo_inicial
+		dec 	POSy
 		jmp 	CICLO
 Fim_E:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   final_min, cx ; minutos para a variavel
-		mov   final_sec, dx ; segundos para a variavel
-		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,final_sec ; soma para obter tempo final
-		sub   ax, total_inic
-		mov   total_time, ax
-		mov   si, offset array
+		call  tempo_final
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -520,35 +487,12 @@ DIREITA:
 		inc   POSx
 		jmp   CICLO
 Inicio_D:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   inic_min, cx ; minutos para a variavel
-		mov   inic_sec, dx ; segundos para a variavel
-		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,inic_sec ; soma para obter tempo final
-		mov 	total_inic,ax ; tempo final para a variavel
-		inc 	POSx
+		call  tempo_inicial
+		dec 	POSy
 		jmp 	CICLO
 Fim_D:
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   final_min, cx ; minutos para a variavel
-		mov   final_sec, dx ; segundos para a variavel
-		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,final_sec ; soma para obter tempo final
-		sub   ax,total_inic ; subtrair o final ao inicial
-		mov   total_time, ax ; mover o total para total_time
-		mov   si, offset array
+		call  tempo_final
 		call  dollars
-		mov   ax, total_time
 		mov  	si, offset array
 		call	number2string
 		mov   POSx, 1
@@ -558,7 +502,6 @@ Fim_D:
 		mov   ah, 9
 		int   21h
 		jmp   FIM
-
 ;###########################################################
 ; PARTE RELACIONADA COM A CRIACAO DO LABIRINTO
 INICIO_Cria:
@@ -702,6 +645,54 @@ fecha_ficheiro_edit:
 		mov 	POSx, 5
 		mov 	POSy, 10
 		jmp		CICLO_Cria
+
+Abre_TOP10:
+		call  apaga_ecran
+		mov 	ax,0b800h
+		mov 	es,ax
+		xor 	si,si
+		goto_xy defaultPOSx, defaultPOSy
+
+		mov 	ah,3Dh ; Abertura do ficheiro
+		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
+		lea 	dx, filename_TOP10
+		int		21h
+		mov		handle_TOP10, ax
+		mov   POSx, 0
+		mov   POSy, 0
+		goto_xy POSx, POSy
+ler_ciclo_TOP:
+		mov   ah,3fh			; indica que vai ser lido um ficheiro
+		mov   bx,handle_TOP10		; bx deve conter o Handle do ficheiro previamente aberto
+		mov   cx,1			; numero de bytes a ler
+		lea   dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
+		int   21h				; faz efectivamente a leitura
+		cmp	  ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
+		je	  fecha_ficheiro_TOP	; se EOF fecha o ficheiro
+		mov   ah,02h			; coloca o caracter no ecran
+		mov	  dl,carFich		; este é o caracter a enviar para o ecran
+		int	  21h				; imprime no ecran
+		jmp	  ler_ciclo_TOP		; continua a ler o ficheiro
+fecha_ficheiro_TOP:
+		mov 	POSy, 23
+		mov 	POSx, 1
+		goto_xy POSx,POSy
+		mov		ah, 09h
+		lea		dx, buffer_lab
+		int		21h
+		mov 	POSx, 5
+		mov 	POSy, 10
+		mov   ah,3eh
+		mov   bx,handle_TOP10
+		int   21h
+Espera_ESC:
+		mov   ah,0
+		cmp   al, 27
+		je    INICIO
+		cmp   al, 27
+		jb    Espera_ESC
+		cmp   al, 27
+		ja    Espera_ESC
 
 FIM:
 		mov 	ah,09h ;display da mensagem de quanto tempo demorou
