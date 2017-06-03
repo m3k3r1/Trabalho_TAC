@@ -200,7 +200,7 @@ INICIO:
 		cmp 	escolha, 49 ;opcao 1
 		je 		menu_jogar  ;leva ao submenu - jogar
 		cmp 	escolha, 50 ;opcao 2
-		je 		fim					;mostra o top 10
+		je 		Abre_TOP10					;mostra o top 10
 		cmp   escolha, 51 ;opcao 3
 		je    menu_conf   ;leva ao submenu - config
 		cmp 	escolha, 52 ;opcao 4
@@ -396,6 +396,7 @@ Inicio_C:
 		jmp 	CICLO
 Fim_C:
 		call  tempo_final
+		mov  	si, offset array
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -424,10 +425,11 @@ BAIXO:
 		jmp		CICLO
 Inicio_B:
 		call  tempo_inicial
-		dec 	POSy
+		inc 	POSy
 		jmp 	CICLO
 Fim_B:
 		call  tempo_final
+		mov  	si, offset array
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -456,10 +458,11 @@ ESQUERDA:
 		jmp		CICLO
 Inicio_E:
 		call  tempo_inicial
-		dec 	POSy
+		dec 	POSx
 		jmp 	CICLO
 Fim_E:
 		call  tempo_final
+		mov  	si, offset array
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -488,10 +491,11 @@ DIREITA:
 		jmp   CICLO
 Inicio_D:
 		call  tempo_inicial
-		dec 	POSy
+		inc 	POSx
 		jmp 	CICLO
 Fim_D:
 		call  tempo_final
+		mov  	si, offset array
 		call  dollars
 		mov  	si, offset array
 		call	number2string
@@ -678,7 +682,7 @@ fecha_ficheiro_TOP:
 		mov 	POSx, 1
 		goto_xy POSx,POSy
 		mov		ah, 09h
-		lea		dx, buffer_lab
+		lea		dx, buffer_Joga
 		int		21h
 		mov 	POSx, 5
 		mov 	POSy, 10
@@ -687,6 +691,7 @@ fecha_ficheiro_TOP:
 		int   21h
 Espera_ESC:
 		mov   ah,0
+		int 	16h
 		cmp   al, 27
 		je    INICIO
 		cmp   al, 27
