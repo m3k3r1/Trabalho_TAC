@@ -13,15 +13,16 @@ dseg   	segment para public 'data'
 		db	'+----------------------------------+$',13,10
 	jogar_menu db 'Jogar',13,10
 		db	'+----------------------------------+',13,10
-		db 	' 1: Jogar                					',13,10
-		db	' 2: Carregar Labirinto						',13,10
+		db 	' 1: Jogar com setas               		',13,10
+		db  ' 2: Jogar com codigo Hexa				',13,10
+		db	' 3: Carregar Labirinto						',13,10
 		db	'+----------------------------------+$',13,10
 	conf_menu db 'Configuracao',13,10
 		db	'+----------------------------------+',13,10
 		db	' 1: Criar Labirinto      					',13,10
 		db  ' 2: Editar Labirinto               ',13,10
 		db	'+----------------------------------+$',13,10
-	buffer_Legenda db "Legenda: 1-Carater cheio//2-Barras//3-Espaco//4- Carater Inicial//5-Carater Final$"
+	buffer_Legenda db "Legenda: 1-Carater cheio//2-Barras//3-Espaco//4-Carater Inicial//5-Carater Final$"
 	buffer_Joga db "Esc-Voltar ao menu$"
 	Escolha   db  ?
 	Car_Cria  db  ?
@@ -45,13 +46,16 @@ dseg   	segment para public 'data'
 	Cria_POSy db  3
 	defaultPOSx db 1
 	defaultPOSy db 1
-	final_min dw ?
-	final_sec dw ?
-	total_time dw ?
-	inic_min dw ?
-	inic_sec dw ?
 	total_inic dw ?
 	array dw 5 dup(?)
+	minutos dw ?
+	segundos dw ?
+	temptotal dw ?
+	tempfinal dw ?
+	tempo_inicial dw ?
+	tempo_final dw ?
+	fbuffer db 10 dup('?')
+
 dseg    	ends
 
 cseg		segment para public 'code'
@@ -89,7 +93,7 @@ string2number proc
 ;CONVERT STRING.
   mov  bx, 0
   mov  bp, 1 ;MULTIPLE OF 10 TO MULTIPLY EVERY DIGIT.
-repeat:
+repetir:
 ;CONVERT CHARACTER.
   mov  al, [ si ] ;CHARACTER TO PROCESS.
   sub  al, 48 ;CONVERT ASCII CHARACTER TO DIGIT.
@@ -103,7 +107,7 @@ repeat:
   mov  bp, ax ;NEW MULTIPLE OF 10.
 ;CHECK IF WE HAVE FINISHED.
   dec  si ;NEXT DIGIT TO PROCESS.
-  loop repeat ;COUNTER CX-1, IF NOT ZERO, REPEAT.
+  loop repetir ;COUNTER CX-1, IF NOT ZERO, REPEAT.
 
   ret
 string2number endp
@@ -165,38 +169,61 @@ apaga:
 		ret
 apaga_ecran	endp
 ;######################################################################
-;Guardar o tempo inicial
-tempo_inicial proc
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   inic_min, cx ; minutos para a variavel
-		mov   inic_sec, dx ; segundos para a variavel
-		mov 	ax,inic_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,inic_sec ; soma para obter tempo final
-		mov 	total_inic,ax ; tempo final para a variavel
+;Guardar o tempo
+tempo_t proc
+
+	 PUSH AX
+	 PUSH BX
+	 PUSH CX
+	 PUSH DX
+
+	 PUSHF
+
+	 MOV AH, 2CH             ; Buscar a hORAS
+	 INT 21H
+
+	 XOR AX,AX
+	 MOV AL, DH              ; segundos para al
+	 mov Segundos, AX		; guarda segundos na variavel correspondente
+
+	 XOR AX,AX
+	 MOV AL, CL              ; Minutos para al
+	 mov Minutos, AX         ; guarda MINUTOS na variavel correspondente
+
+	 ; converter minutos para segundos // CHECK THIS
+	 mov bl,60
+	 mul bl		;AX<-Ax*60
+	 add	Segundos, AX ;segundos<-minutos+segundos
+	 mov  ax, Segundos
+	 mov  temptotal,ax
+
+	 POPF
+	 POP DX
+	 POP CX
+	 POP BX
+	 POP AX
+
+	 RET
+tempo_t endp
+;################################################
+;imprimir bonus
+imprime1 proc
+		mov		ah, 02h
+		mov		dl, 254	; Coloca AVATAR
+		int		21H
+		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+
+		mov		al, POSx	; Guarda a posi��o do cursor
+		mov		POSxa, al
+		mov		al, POSy	; Guarda a posi��o do cursor
+		mov 		POSya, al
+
+		mov		al, POSx	; Guarda a posi��o do cursor
+		mov		ProxPOSx, al
+		mov		al, POSy	; Guarda a posi��o do cursor
+		mov 	ProxPOSy, al
 		ret
-tempo_inicial endp
-;######################################################################
-;Calculo do tempo demorado
-tempo_final proc
-		mov   ah, 2Ch
-		int   21h    ; tempo do sistema no final do labirinto
-		xor 	ch,ch  ; variaveis de tempo sao words para facilitar o calculo por isso metemos parte a 0
-		xor   dh,dh
-		mov   final_min, cx ; minutos para a variavel
-		mov   final_sec, dx ; segundos para a variavel
-		mov 	ax,final_min ; numeros de minutos para ax para multiplicar
-		mov   bx, 60 ; multiplicar por 60 (minutos * 60 = segundos)
-		mul   bx ; multiplicacao
-		add 	ax,final_sec ; soma para obter tempo final
-		sub   ax, total_inic ; subtracao do tempo inicial ao final para obter o total
-		mov   total_time, ax
-		ret
-tempo_final endp
+imprime1 endp
 
 main		proc
 		mov   ax, dseg
@@ -227,7 +254,7 @@ INICIO:
 		cmp 	escolha, 49 ;opcao 1
 		je 		menu_jogar  ;leva ao submenu - jogar
 		cmp 	escolha, 50 ;opcao 2
-		je 		Abre_TOP10					;mostra o top 10
+		je 		final					;mostra o top 10
 		cmp   escolha, 51 ;opcao 3
 		je    menu_conf   ;leva ao submenu - config
 		cmp 	escolha, 52 ;opcao 4
@@ -252,10 +279,12 @@ menu_jogar:
 		cmp 	escolha, 49 ; opcao 1
 		je 		Abre_Default
 		cmp 	escolha, 50 ; opcao 2
-		je 		Abre_User
+		je 		Abre_Default
+		cmp   escolha, 51; opcao 3
+		je    Abre_User
 		cmp 	al, 48
 		jbe 	menu_jogar; caso nao escolha uma das opcoes volta ao inicio do menu
-		cmp 	al, 50
+		cmp 	al, 51
 		jae 	menu_jogar
 ;###########################################
 ;Sub menu de Jogar
@@ -319,7 +348,9 @@ fecha_ficheiro:
 		mov   ah,3eh
 		mov   bx,handle
 		int   21h
-		jmp		CICLO
+		cmp   escolha, 49
+		je		CICLO
+		jne   bonus
 ;#######################################
 ;Abertura do labirinto do user
 Abre_User:
@@ -418,16 +449,23 @@ ESTEND:
 		dec 	POSy
 		jmp 	CICLO
 Inicio_C:
-		call  tempo_inicial
+		call  tempo_t
+	  mov   ax, temptotal
+		mov   tempo_inicial, ax
 		dec 	POSy
 		jmp 	CICLO
 Fim_C:
-		call  tempo_final
-		mov  	si, offset array
-		call  dollars
-		mov  	si, offset array
-		mov		ax, total_time
-		call	number2string
+		call	tempo_t  ; recebe tempo final
+		mov		ax, temptotal ;guarda o tempo total em tempfinal // CHECK THIS
+		mov		tempo_final,ax
+		mov ax, tempo_inicial
+		sub tempo_final,ax
+		mov si,	offset array
+		call	dollars
+		mov si,offset array
+		mov ax,tempo_final
+		call number2string
+		mov  dx, offset array
 		mov   POSx, 1
 		mov   POSy, 23
 		goto_xy POSx, POSy
@@ -435,7 +473,6 @@ Fim_C:
 		mov   ah, 9
 		int   21h
 		jmp   FIM
-
 BAIXO:
 		cmp		al,50h
 		jne		ESQUERDA
@@ -446,22 +483,29 @@ BAIXO:
 		cmp   al, 73 ;Verifica se o caracter e o inicial
 		je    Inicio_B
 		cmp   ProxPOSy,22
-		je   	CICLO
+		je   CICLO
 		cmp 	al, 20h ; ; Verificacao se esta esta ocupada
 		jne 	CICLO
 		inc 	POSy
 		jmp		CICLO
 Inicio_B:
-		call  tempo_inicial
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
 		inc 	POSy
 		jmp 	CICLO
-Fim_B:
-		call  tempo_final
-		mov  	si, offset array
-		call  dollars
-		mov		ax, total_time
-		mov  	si, offset array
-		call	number2string
+		Fim_B:
+		call	tempo_t  ; recebe tempo final
+		mov		ax, temptotal ;guarda o tempo total em tempfinal // CHECK THIS
+		mov		tempo_final,ax
+		mov ax, tempo_inicial
+		sub tempo_final,ax
+		mov si,	offset array
+		call	dollars
+		mov si,offset array
+		mov ax,tempo_final
+		call number2string
+		mov  dx, offset array
 		mov   POSx, 1
 		mov   POSy, 23
 		goto_xy POSx, POSy
@@ -469,6 +513,7 @@ Fim_B:
 		mov   ah, 9
 		int   21h
 		jmp   FIM
+
 
 ESQUERDA:
 		cmp		al,4Bh
@@ -486,16 +531,23 @@ ESQUERDA:
 		dec		POSx
 		jmp		CICLO
 Inicio_E:
-		call  tempo_inicial
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
 		dec 	POSx
 		jmp 	CICLO
 Fim_E:
-		call  tempo_final
-		mov  	si, offset array
-		call  dollars
-		mov		ax, total_time
-		mov  	si, offset array
-		call	number2string
+		call	tempo_t  ; recebe tempo final
+		mov		ax, temptotal ;guarda o tempo total em tempfinal // CHECK THIS
+		mov		tempo_final,ax
+		mov ax, tempo_inicial
+		sub tempo_final,ax
+		mov si,	offset array
+		call	dollars
+		mov si,offset array
+		mov ax,tempo_final
+		call number2string
+		mov  dx, offset array
 		mov   POSx, 1
 		mov   POSy, 23
 		goto_xy POSx, POSy
@@ -503,6 +555,7 @@ Fim_E:
 		mov   ah, 9
 		int   21h
 		jmp   FIM
+
 
 DIREITA:
 		cmp		al,4Dh
@@ -520,16 +573,23 @@ DIREITA:
 		inc   POSx
 		jmp   CICLO
 Inicio_D:
-		call  tempo_inicial
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
 		inc 	POSx
 		jmp 	CICLO
-Fim_D:
-		call  tempo_final
-		mov  	si, offset array
-		call  dollars
-		mov  	si, offset array
-		mov		ax, total_time
-		call	number2string
+		Fim_D:
+		call	tempo_t  ; recebe tempo final
+		mov		ax, temptotal ;guarda o tempo total em tempfinal // CHECK THIS
+		mov		tempo_final,ax
+		mov ax, tempo_inicial
+		sub tempo_final,ax
+		mov si,	offset array
+		call	dollars
+		mov si,offset array
+		mov ax,tempo_final
+		call number2string
+		mov  dx, offset array
 		mov   POSx, 1
 		mov   POSy, 23
 		goto_xy POSx, POSy
@@ -537,6 +597,7 @@ Fim_D:
 		mov   ah, 9
 		int   21h
 		jmp   FIM
+
 ;###########################################################
 ; PARTE RELACIONADA COM A CRIACAO DO LABIRINTO
 INICIO_Cria:
@@ -686,55 +747,189 @@ fecha_ficheiro_edit:
 		mov 	POSy, 10
 		jmp		CICLO_Cria
 
-Abre_TOP10:
-		call  apaga_ecran
-		mov 	ax,0b800h
-		mov 	es,ax
-		xor 	si,si
-		goto_xy defaultPOSx, defaultPOSy
+bonus:
+		goto_xy	POSx,POSy	; Vai para nova possi��o
+		mov		al, POSx	; Guarda a posi��o do cursor
+		mov		POSxa, al
+		mov		al, POSy	; Guarda a posi��o do cursor
+		mov 		POSya, al
 
-		mov 	ah,3Dh ; Abertura do ficheiro
-		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx, filename_TOP10
-		int		21h
-		mov		handle_TOP10, ax
-		mov   POSx, 0
-		mov   POSy, 0
-		goto_xy POSx, POSy
-ler_ciclo_TOP:
-		mov   ah,3fh			; indica que vai ser lido um ficheiro
-		mov   bx,handle_TOP10		; bx deve conter o Handle do ficheiro previamente aberto
-		mov   cx,1			; numero de bytes a ler
-		lea   dx,carFich		; vai ler para o local de memoria apontado por dx (car_fich)
-		int   21h				; faz efectivamente a leitura
-		cmp	  ax,0			;EOF?	verifica se já estamos no fim do fdoicheiro
-		je	  fecha_ficheiro_TOP	; se EOF fecha o ficheiro
-		mov   ah,02h			; coloca o caracter no ecran
-		mov	  dl,carFich		; este é o caracter a enviar para o ecran
-		int	  21h				; imprime no ecran
-		jmp	  ler_ciclo_TOP		; continua a ler o ficheiro
-fecha_ficheiro_TOP:
-		mov 	POSy, 23
-		mov 	POSx, 1
-		goto_xy POSx,POSy
-		mov		ah, 09h
-		lea		dx, buffer_Joga
-		int		21h
-		mov 	POSx, 5
-		mov 	POSy, 10
-		mov   ah,3eh
-		mov   bx,handle_TOP10
-		int   21h
-Espera_ESC:
-		mov   ah,0
-		int 	16h
-		cmp   al, 27
-		je    INICIO
-		cmp   al, 27
-		jb    Espera_ESC
-		cmp   al, 27
-		ja    Espera_ESC
+		mov		al, POSx	; Guarda a posi��o do cursor
+		mov		ProxPOSx, al
+		mov		al, POSy	; Guarda a posi��o do cursor
+		mov 	ProxPOSy, al
 
+		mov ah, 00h
+		int 16h
+
+		cmp al, 48
+		mov cx, 1
+		je bonus_cima
+
+		cmp al, 49
+		mov cx, 2
+		je bonus_cima
+
+		cmp al, 50
+		mov cx, 3
+		je bonus_cima
+
+		cmp al, 51
+		mov cx, 4
+		je bonus_cima
+
+		cmp al, 52
+		mov cx, 1
+		je bonus_baixo
+
+		cmp al, 53
+		mov cx, 2
+		je bonus_baixo
+
+		cmp al, 54
+		mov cx, 3
+		je bonus_baixo
+
+		cmp al, 55
+		mov cx, 4
+		je bonus_baixo
+
+		cmp al, 56
+		mov cx, 1
+		je bonus_direita
+
+		cmp al, 57
+		mov cx, 2
+		je bonus_direita
+
+		cmp al, 97
+		mov cx, 3
+		je bonus_direita
+
+		cmp al, 98
+		mov cx, 4
+		je bonus_direita
+
+		cmp al, 99
+		mov cx, 1
+		je bonus_esquerda
+
+		cmp al, 100
+		mov cx, 2
+		je bonus_esquerda
+
+		cmp al, 101
+		mov cx, 3
+		je bonus_esquerda
+
+		cmp al, 102
+		mov cx, 4
+		je bonus_esquerda
+
+		cmp al,27
+		je  INICIO
+
+bonus_cima:
+		dec 	ProxPOSy
+		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
+		cmp   al, 70
+		je    Fim_C
+		cmp 	al, 20h ; Verificacao se esta esta ocupada
+		jne 	bonus
+		dec 	POSy
+		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
+		mov		ah, 02h
+		mov		dl, Car	; Repoe Caracter guardado
+		int		21H
+
+		goto_xy	POSx,POSy	; Vai para nova possi��o
+		mov 	ah, 08h
+		mov		bh,0		; numero da p�gina
+		int		10h
+		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
+		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+
+		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+
+		call imprime1
+		loop bonus_cima
+		jmp bonus
+bonus_baixo:
+		inc 	ProxPOSy
+		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
+		cmp   al, 70
+		je    Fim_C
+		cmp 	al, 20h ; Verificacao se esta esta ocupada
+		jne 	bonus
+		inc 	POSy
+		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
+		mov		ah, 02h
+		mov		dl, Car	; Repoe Caracter guardado
+		int		21H
+
+		goto_xy	POSx,POSy	; Vai para nova possi��o
+		mov 	ah, 08h
+		mov		bh,0		; numero da p�gina
+		int		10h
+		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
+		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+
+		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+
+		call imprime1
+		loop bonus_baixo
+		jmp bonus
+bonus_direita:
+		inc 	ProxPOSx
+		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
+		cmp   al, 70
+		je    Fim_C
+		cmp   al,73
+		cmp 	al, 20h ; Verificacao se esta esta ocupada
+		jne 	bonus
+		inc 	POSx
+		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
+		mov		ah, 02h
+		mov		dl, Car	; Repoe Caracter guardado
+		int		21H
+
+		goto_xy	POSx,POSy	; Vai para nova possi��o
+		mov 	ah, 08h
+		mov		bh,0		; numero da p�gina
+		int		10h
+		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
+		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+
+		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+
+		call imprime1
+		loop bonus_direita
+		jmp bonus
+bonus_esquerda:
+		dec 	ProxPOSx
+		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
+		cmp   al, 70
+		je    Fim_C
+		cmp 	al, 20h ; Verificacao se esta esta ocupada
+		jne 	bonus
+		dec 	POSx
+		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
+		mov		ah, 02h
+		mov		dl, Car	; Repoe Caracter guardado
+		int		21H
+
+		goto_xy	POSx,POSy	; Vai para nova possi��o
+		mov 	ah, 08h
+		mov		bh,0		; numero da p�gina
+		int		10h
+		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
+		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+
+		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+
+		call imprime1
+		loop bonus_esquerda
+		jmp bonus
 FIM:
 		mov 	ah,09h ;display da mensagem de quanto tempo demorou
 		lea   dx, Mensagem_Final
