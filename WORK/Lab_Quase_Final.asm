@@ -3,6 +3,17 @@
 .stack	2048
 
 dseg   	segment para public 'data'
+	mensagem_controlos db '			1 Passo // 2 Passos // 3 Passos // 4 Passos',13,10
+										db 	'Cima      1          2       	3         4',13,10
+	db 	'Baixo     4          5       	6         7',13,10
+	db 	'Cima      8          9       	A         B',13,10
+	db 	'Cima      C          D       	E         F',13,10
+	mensagem_bonus db	'+----------------------------------+',13,10
+	db 	' 1:                 					',13,10
+	db 	' 2: Top 10           							',13,10
+	db	' 3: Configuracao do Labirinto     ',13,10
+	db	' 4: Sair                          ',13,10
+	db	'+----------------------------------+$',13,10
 	Mensagem_Final db 'Parabens conseguiu chegar ao fim.$'
 	main_menu db 'Labirinto',13,10
 		db	'+----------------------------------+',13,10
@@ -494,7 +505,7 @@ Inicio_B:
 		mov   tempo_inicial, ax
 		inc 	POSy
 		jmp 	CICLO
-		Fim_B:
+Fim_B:
 		call	tempo_t  ; recebe tempo final
 		mov		ax, temptotal ;guarda o tempo total em tempfinal // CHECK THIS
 		mov		tempo_final,ax
@@ -746,7 +757,15 @@ fecha_ficheiro_edit:
 		mov 	POSx, 5
 		mov 	POSy, 10
 		jmp		CICLO_Cria
-
+bonus_inicio:
+		mov POSx, 0
+		mov POSy, 0
+		goto_xy POSx, POSy
+		mov  ah,09h
+		lea  dx,mensagem_bonus
+		int  21h
+		mov  POSx, 10
+		mov  POSy, 15
 bonus:
 		goto_xy	POSx,POSy	; Vai para nova possi��o
 		mov		al, POSx	; Guarda a posi��o do cursor
@@ -829,38 +848,51 @@ bonus:
 		cmp al,27
 		je  INICIO
 
-bonus_cima:
-		dec 	ProxPOSy
-		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
-		cmp   al, 70
-		je    Fim_C
-		cmp 	al, 20h ; Verificacao se esta esta ocupada
-		jne 	bonus
-		dec 	POSy
-		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
-		mov		ah, 02h
-		mov		dl, Car	; Repoe Caracter guardado
-		int		21H
+		bonus_cima:
+				dec 	ProxPOSy
+				goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
+				cmp   al, 70
+				je    Fim_C
+				cmp   al,73
+				je    bonus_cima_inicio
+				cmp 	al, 20h ; Verificacao se esta esta ocupada
+				jne 	bonus
+		bonus_cima_imprime:
+				dec 	POSy
+				goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
+				mov		ah, 02h
+				mov		dl, Car	; Repoe Caracter guardado
+				int		21H
 
-		goto_xy	POSx,POSy	; Vai para nova possi��o
-		mov 	ah, 08h
-		mov		bh,0		; numero da p�gina
-		int		10h
-		mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
-		mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
+				goto_xy	POSx,POSy	; Vai para nova possi��o
+				mov 	ah, 08h
+				mov		bh,0		; numero da p�gina
+				int		10h
+				mov		Car, al	; Guarda o Caracter que est� na posi��o do Cursor
+				mov		Cor, ah	; Guarda a cor que est� na posi��o do Cursor
 
-		goto_xy	POSx,POSy	; Vai para posi��o do cursor
+				goto_xy	POSx,POSy	; Vai para posi��o do cursor
 
-		call imprime1
-		loop bonus_cima
-		jmp bonus
+				call imprime1
+				loop bonus_cima
+				jmp bonus
+		bonus_cima_inicio:
+				call  tempo_t
+				mov   ax, temptotal
+				mov   tempo_inicial, ax
+				jmp 	bonus_cima_imprime
+
+
 bonus_baixo:
 		inc 	ProxPOSy
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
 		cmp   al, 70
 		je    Fim_C
+		cmp   al,73
+		je    bonus_baixo_inicio
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
 		jne 	bonus
+bonus_baixo_imprime:
 		inc 	POSy
 		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
 		mov		ah, 02h
@@ -879,13 +911,21 @@ bonus_baixo:
 		call imprime1
 		loop bonus_baixo
 		jmp bonus
+bonus_baixo_inicio:
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
+		jmp 	bonus_cima_imprime
+
 bonus_direita:
 		inc 	ProxPOSx
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
 		cmp   al, 70
 		je    Fim_C
 		cmp   al,73
+		je    bonus_direita_inicio
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
+bonus_direita_imprime:
 		jne 	bonus
 		inc 	POSx
 		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
@@ -902,16 +942,25 @@ bonus_direita:
 
 		goto_xy	POSx,POSy	; Vai para posi��o do cursor
 
-		call imprime1
-		loop bonus_direita
-		jmp bonus
+		call 	imprime1
+		loop 	bonus_direita
+		jmp 	bonus
+bonus_direita_inicio:
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
+		jmp 	bonus_direita_imprime
+
 bonus_esquerda:
 		dec 	ProxPOSx
 		goto_Prox_xy ProxPOSx,ProxPOSy ; Mudar de posicao para a seguinte
 		cmp   al, 70
 		je    Fim_C
+		cmp   al, 73
+		je    bonus_esquerda_inicio
 		cmp 	al, 20h ; Verificacao se esta esta ocupada
 		jne 	bonus
+bonus_esquerda_imprime:
 		dec 	POSx
 		goto_xy	POSxa,POSya	; Vai para a posi��o anterior do cursor
 		mov		ah, 02h
@@ -930,6 +979,13 @@ bonus_esquerda:
 		call imprime1
 		loop bonus_esquerda
 		jmp bonus
+bonus_esquerda_inicio:
+		call  tempo_t
+		mov   ax, temptotal
+		mov   tempo_inicial, ax
+		jmp 	bonus_esquerda_imprime
+
+
 FIM:
 		mov 	ah,09h ;display da mensagem de quanto tempo demorou
 		lea   dx, Mensagem_Final
