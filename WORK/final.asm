@@ -59,6 +59,7 @@ dseg   	segment para public 'data'
 								db ?
 								db "          "
 	nome_com_sifrao			db "         "
+	pedir_ficheiro db "Indique o nome do ficheiro $",0
 	pedir_jogador 			db	"Indique o nome do jogador $",0
 	tops 		db "030s","Jorge     ", 13,10
 					db "045s","Ricardo   ", 13,10
@@ -431,13 +432,17 @@ Abre_User:
 		xor 	si,si
 		goto_xy defaultPOSx, defaultPOSy
 
-		obtem_string_nome_jogador pedir_jogador
+		obtem_string_nome_jogador pedir_ficheiro
 
 		mov 	ah,3Dh ; Abertura do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx, filename_Cria
+		lea 	dx, nome_com_sifrao
 		int		21h
 		mov		handle_Cria, ax
+
+		call  apaga_ecran
+		obtem_string_nome_jogador pedir_jogador
+		call apaga_ecran
 		mov   POSx, 0
 		mov   POSy, 0
 		goto_xy POSx, POSy
@@ -685,9 +690,12 @@ INICIO_Cria:
 		dec		POSy		; linha = linha -1
 		dec		POSx		; POSx = POSx -1
 
+		obtem_string_nome_jogador pedir_ficheiro
+		call  apaga_ecran
+
 		mov 	ah,3CH ; Criacao do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx, filename_Cria
+		lea 	dx, nome_com_sifrao
 		int		21h
 		mov		handle_Cria, ax
 		mov 	POSy, 23
@@ -795,9 +803,12 @@ Editar:
 		mov 	es,ax
 		xor 	si,si
 
+		obtem_string_nome_jogador pedir_ficheiro
+		call  apaga_ecran
+
 		mov 	ah,3Dh ; Abertura do ficheiro
 		mov 	cx,0	; Apos criacao o ficheiro ja esta aberto para leitura / escrita.
-		lea 	dx, filename_Cria
+		lea 	dx, nome_com_sifrao
 		int		21h
 		mov		handle_Cria, ax
 		mov   POSx, 0
@@ -825,6 +836,7 @@ fecha_ficheiro_edit:
 		mov 	POSx, 5
 		mov 	POSy, 10
 		jmp		CICLO_Cria
+
 
 bonus_inicio:
 		goto_xy 0, 0
@@ -1230,7 +1242,6 @@ fecha_ficheiro:					; vamos fechar o ficheiro
 sai:
 		ret
 LER_FICH_RECORDS endp
-
 
 FIM:
 		mov 	ah,09h ;display da mensagem de quanto tempo demorou
