@@ -52,6 +52,7 @@ dseg   	segment para public 'data'
 	inic_sec dw ?
 	total_inic dw ?
 	array dw 5 dup(?)
+	fbuffer d
 dseg    	ends
 
 cseg		segment para public 'code'
@@ -711,6 +712,7 @@ ler_ciclo_TOP:
 		je	  fecha_ficheiro_TOP	; se EOF fecha o ficheiro
 		mov   ah,02h			; coloca o caracter no ecran
 		mov	  dl,carFich		; este é o caracter a enviar para o ecran
+		mov 	fbuffer[si], dl
 		int	  21h				; imprime no ecran
 		jmp	  ler_ciclo_TOP		; continua a ler o ficheiro
 fecha_ficheiro_TOP:
